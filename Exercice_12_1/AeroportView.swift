@@ -1,20 +1,11 @@
-//
-//  AeroportView.swift
-//  Exercice_12_1
-//
-//  Created by user230518 on 3/22/23.
-//
-
 import SwiftUI
 import CoreLocation
 import MapKit
 
 extension CLPlacemark {
     var adresse: String {
-        get {
-            let arr = [subThoroughfare, thoroughfare, locality, administrativeArea, country, postalCode]
-            return arr.compactMap{$0}.joined(separator: ", ")
-        }
+        let arr = [subThoroughfare, thoroughfare, locality, administrativeArea, country, postalCode]
+        return arr.compactMap { $0 }.joined(separator: ", ")
     }
 }
 
@@ -23,7 +14,7 @@ struct AeroportView: View {
     
     let titreLargeur: CGFloat = 80
     
-    @State var adresse: String?
+    @State private var adresse: String? = "Chargement de l'adresse..."
     
     var body: some View {
         Form {
@@ -70,10 +61,40 @@ struct AeroportView: View {
                     .frame(width: titreLargeur, alignment: .trailing)
                     
                     VStack(alignment: .leading) {
-                        Text(String(aéroport.latitude))
-                        Text(String(aéroport.longitude))
+                        Text("\(aéroport.latitude)")
+                        Text("\(aéroport.longitude)")
                     }
                 }
+            }
+
+            Section("Adresse Postale") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(adresse ?? "Adresse non disponible")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Button("Ouvrir dans Apple Plan") {
+                        let placemark = MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: aéroport.latitude, longitude: aéroport.longitude))
+                        let mapItem = MKMapItem(placemark: placemark)
+                        mapItem.name = aéroport.nom
+                        mapItem.openInMaps(launchOptions: [MKLaunchOptionsMapTypeKey: MKMapType.satelliteFlyover.rawValue])
+                    }
+                }
+            }
+        }
+        .onAppear {
+            let geocoder = CLGeocoder()
+            geocoder.reverseGeocodeLocation(CLLocation(latitude: aéroport.latitude, longitude: aéroport.longitude)) { placemarks, error in
+                if let _ = error {
+                    adresse = "Impossible de récupérer l'adresse."
+                    return
+                }
+                guard let placemark = placemarks?.first else {
+                    adresse = "Adresse introuvable."
+                    return
+                }
+                adresse = placemark.adresse
             }
         }
         .navigationTitle("Aéroport \(aéroport.code)")
